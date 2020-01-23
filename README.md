@@ -177,11 +177,55 @@ To implement WMD, we use pre-trained word2vec embeddings from the Google Newsdat
 
 <img src='./images/diag8.png'>
 
+The implementation of the WMD distance on our test dataset is as follows:
+
+<img src='./images/diag9.png'>
+
+
 The average WMD Distance score is **1.17**, which suggests that the generated captionsare quite close to the original ones.  Through experimentation,  we can see that if thecaptions are not similar the WMD score is generally over **1.25**, and often over **1.5**
 
+#### Results
+
+> In  table  3.3,  we  had  observed  few  samples  of  real  and  generated  captions  for  whichthe N-gram BLEU scores were very less, even though the captions were quite similar.We compute the WMD Distance metric between these captions using pre-trained GoogleNews word embeddings (12), and the results are summarized in table 3.4.  It is clear fromthe above results that applying WMD metric to the captions generate better results.
 
 
+### Some optimizations for deploying
 
+We  optimized  the  CNN  part  of  the  model  by  pre-computing  and  storing  the  image  features.   When  we  deploy  the  model  to  the  web,we  need  to  consider  the  running  time  of  the  model.   For  that,  we  should  store  all the variables, data structures and weights of the models which have been trained and optimized on disk so that while predicting, the application can just read from these file sand  run  the  data  through  the  model  to  get  the  predictions.   We  should  not  have  to re-create the datasets or re-train the model every time.  Most importantly, the creation of the training dataset takes a long time (30 mins on 25GBRAM) and should be stored on disk.
+
+<img src='./images/diag10.png'>
+
+#### Optimizing word embeddings
+
+Our model has an embedding layer of fixed dimensionality which learns dense vector space embeddings of words. Once trained on the whole dataset,**8763** words are learned by the model.  This is a significant number and it does not make sense to precompute the embeddings every time.  So, the embedding matrix once learned can be stored as a numpy array of dimensionality(vocabularysize, embeddingsize)and then be stored on disk as a pickle, which the model can refer to while training.  This significantly reduced the training time of the model (by almost 10 minutes on a batchof 1000 new images for 20 epochs).  Also, to make this approach work, we keep a list of words in our vocabulary.  If **newer data comes in and the percentage of words that are out-of-vocabulary is beyond a particular threshold, we re-train the embedding**.  This process is summarized in Figure 3.8.
+
+#### Using model checkpoints
+
+Also, because the model will be deployed on the cloud, we may need to re-train the model as we receive new data. So we should always ensure that we are using the best model for the predictions. An easy way to do this is to monitor the loss via callbacks. Callbacks allow us to monitor important statistics of a model like loss and accuracy while training [29]. Using callbacks we can create checkpoints of the model  The way we do this is: 
+
+```
+Set the format of the model file as: model-ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5
+Create a new ModelCheckpoint instance
+Set the appropriate parameters:
+    monitor = ‘val_loss’
+    save_best_only = True: Only save the model with the lowest validation score
+    mode = ‘min’: overwrite the current file if the model has the minimum validation loss
+Set the checkpoint as a callback while training the model
+```
+
+> Thus, only the model with the lowest validation loss will be stored on disk. If the current model has a lower validation loss, the model on disk will be replaced by the current one.
+
+#### File management
+
+
+Table 3.5 shows a possible configuration of the files that have to be maintained on disk, their types and refresh rates. Generally files of sizes less than 1GB can be maintained as pickle files. Files larger than that have to be stored in HDF (HD5) format.
+
+<img src='./images/diag11.png'>
+
+Now that we have developed a system for automatically captioning images and we have also applied metrics to test the quality of the generated captions keeping in mind the complexities of natural language. Additionally, we explore some additional extended features that we can provide users to improve their experiences on the web.
+
+
+---
 
 
 
