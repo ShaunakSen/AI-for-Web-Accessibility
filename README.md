@@ -1,4 +1,4 @@
-## AI-for-Web-Accessibility
+## Artificial Intelligence for Web Accessibility
 
 
 This is the GitHub repository for my Masters dissertation titled: **Artificial Intelligence for Web Accessibility** which I completed as a part of my MSc in
@@ -18,7 +18,7 @@ The project mainly focuses on two parts:
 1. Automatic Image Captioning System
 2. Contextual Hyperlink Detection
 
-This document only provides an overview. For details please refer to the full report [here](link)
+This document only provides an overview. For details please refer to the full report [here](https://github.com/ShaunakSen/AI-for-Web-Accessibility/blob/master/AI_for_Web_Accessibilty%20-%20MSc%20Project%20Dissertation.pdf)
 
 ### Automatic Image Captioning System
 
