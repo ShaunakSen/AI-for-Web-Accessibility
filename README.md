@@ -227,7 +227,102 @@ Now that we have developed a system for automatically captioning images and we h
 
 ---
 
+### Object Detection
+
+Image captions provide a visually impaired user with an overview of what the image is trying to convey. However, what we noticed was that the captions generated were often vague, like “children playing in the park” instead of “three children playing with football in the park”. One way to do this would be to incorporate an attention mechanism (65) in our model. However, this would not solve the problem perfectly as the results in (65) and (50) are quite comparable. 
+
+A solution is to use object detection. As mentioned, image captioning provides a general overview of what the image is trying to convey. The motivation behind this is that to get a detailed understanding of what is going on in the image, users can toggle through the objects in the image and the system will read out what that object is.
+
+There are many object detection libraries and APIs available, but we use Microsoft Azure Vision API (30 ) for this purpose, due to the following reasons:
+
+1. The API returns the objects detected as well as the coordinates of the bounding boxes
+2. The API returns a confidence level of the detection
+3. The API returns parent objects for any detected object. For e.g bicycle helmet - helmet - headwear. bicycle helmet is the detected object here.
+4. The API returns the data in JSON (JavaScript Object Notation) format which is easy to interpret using JavaScript and Python
+
+A sample response from the API, when the model has detected the object \textbf{dog} is shown below:
+
+``` javascript
+
+{
+    "url": url for the image,
+    "response": {
+        "objects": [{
+          "rectangle": {
+            "x": 154,
+            "y": 23,
+            "w": 102,
+            "h": 122
+          },
+          "object": "dog",
+          "confidence": 0.845,
+          "parent": {
+            "object": "mammal",
+            "confidence": 0.849,
+            "parent": {
+              "object": "animal",
+              "confidence": 0.906
+            }
+          }
+        }],
+        "requestId": unique request id,
+        "metadata": {
+          "width": 356,
+          "height": 277,
+          "format": "Png"
+        }
+      }
+}
+```
+
+Some of the features that this application should have are the following:
+
+1. The image should have a generic caption which will be the output of the image captioning model
+2. If the user wants, they can explore more. On the click of a button, the object detection API should be executed 
+3. The bounding boxes for each object in the image should be drawn
+4. User can hover over these objects and the information should be provided via text and speech
+5. User can also toggle through the objects by pressing a specific key (completely blind users will not know where to hover on the image)
+
+Keeping these features in mind, a demonstration application was built. The link to this application is: 
+[https://codepen.io/shaunak1105/full/dybZEXa](https://codepen.io/shaunak1105/full/dybZEXa)
+
+<img src='./images/diag12.png'>
+
+The above figure shows how users can interact with the app. The information about the objects detected is provided both by text and speech. The bounding boxes are also overlaid on the image. Users can choose to hover over the objects or toggle through them by pressing the `space` key.
 
 
+### Relevance of image on a web page
+
+Often, we come across web sites which are cluttered with images. These images may be present for the purpose of advertisements and they do not convey any real meaning to the topic being discussed. These images are thus confusing and distracting and for someone who is using screen readers, the experience will be worse. 
+
+The motivation behind this extension is to detect these irrelevant images from the text surrounding it and automatically flag these images so that they can be ignored by the screen readers. 
+
+We have already built an image captioning system and evaluated metrics for testing caption-to-caption similarity using WMD. To extract the text surrounding the image, we can consider a window of `w` words around the image tag. So we have the generated caption, the words surrounding the image and we want to apply WMD to detect of the text and image caption are in context to each other or not.
+
+We initially pre-process both the caption text and the surrounding text . Then we computed the WMD score. however, we were not getting proper results (the scores were always higher than 1.25).
+
+The caption text does not have a fixed length of words. So we cannot directly consider it as a document and compute WMD between the texts. Additionally, only a part of the surrounding text might be discussing the caption. So if we simply compute the WMD between the caption and surrounding text, it will return a high value, but that does not mean that they are not similar.
+
+However,**at least one part** of the surrounding text must be discussing the caption. We can detect this by splitting both the surrounding text and the caption into N-grams (62). For example, if the caption has 5 words, we can consider 2-gram sequences, 3-gram sequences, 4-gram sequences, and 5-gram sequences between the caption and the surrounding text and then compute WMD similarity. The intuition is that at least one of these N-grams between the caption and the surrounding text should have a close match i.e have less WMD score.
+
+The algorithm to do this is described below:
+
+```
+Preprocess both the caption text and surrounding text
+Compute length of caption
+For i in range of 2 to length of caption:
+    Create i-grams of caption text
+    Create i-grams of surrounding text
+    For each such i-gram pair
+        Compute WMD between caption i-gram and surrounding i-gram
+            If WMD < 1.15
+                The caption is similar
+                    Return true
+            Else
+                continue
+Return false - the caption is not similar
+```
+<img src='./images/diag13.png'>
 
 
+This process is visualized in teh figure below. It is clear for this scenario, simply computing the WMD score between the caption and surrounding text resulted in a high score of **1.34**. However using the algorithm discussed, we get a much lower score and we can also visually see which parts of the text received a close match (shown in green in the figure). By removal of stopwords, we have ensured that common words are not taken into the formation of N-grams.
