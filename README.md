@@ -326,3 +326,5 @@ Return false - the caption is not similar
 
 
 This process is visualized in teh figure below. It is clear for this scenario, simply computing the WMD score between the caption and surrounding text resulted in a high score of **1.34**. However using the algorithm discussed, we get a much lower score and we can also visually see which parts of the text received a close match (shown in green in the figure). By removal of stopwords, we have ensured that common words are not taken into the formation of N-grams.
+
+> In progress; to be continued
